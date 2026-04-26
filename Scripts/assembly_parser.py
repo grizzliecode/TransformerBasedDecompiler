@@ -55,7 +55,7 @@ DATA_END = {
 class AssemblyParser:
     def __init__(self, assembly_file: str):
         self.assembly_file = assembly_file
-        self.data_segments = []
+        self.data_segments = ""
         self.code_segments = []
         self.state = SegmentationState.IDLE
 
@@ -79,7 +79,6 @@ class AssemblyParser:
             while i < mx:
                 line = lines[i]
                 cs, ce, ds, de = self._get_signal_activations(line)
-                # print(f"Line {i}: {line.strip()} | State: {self.state} | CS: {cs}, CE: {ce}, DS: {ds}, DE: {de}")
                 if self.state == SegmentationState.IDLE:
                     if cs and not ds:
                         self.state = SegmentationState.CODE
@@ -94,11 +93,7 @@ class AssemblyParser:
                 elif self.state == SegmentationState.DATA:
                     if not cs and de:
                         self.state = SegmentationState.IDLE
-                        self.data_segments.append("".join(current_data_segment))
-                        current_data_segment = []
                     elif cs:
-                        self.data_segments.append("".join(current_data_segment))
-                        current_data_segment = []
                         current_code_segment.append(line)
                         self.state = SegmentationState.CODE
                         i+=1
@@ -119,12 +114,12 @@ class AssemblyParser:
                     else:
                         current_code_segment.append(line)
                         i+=1
-            if len(current_data_segment) > 0:
-                self.data_segments.append("".join(current_data_segment))
             if len(current_code_segment) > 0:
                 self.code_segments.append("".join(current_code_segment))
+        self.data_segments = "\n".join(current_data_segment)
+        
 
-    def get_elements(self) -> tuple[list, list]:
+    def get_elements(self) -> tuple[list, str]:
         return self.data_segments, self.code_segments
 
    
