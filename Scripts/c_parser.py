@@ -37,8 +37,9 @@ class CParser:
 
     def parse(self):
         source_code = ""
-        with open(self.file_path, "rb") as fin:
-            source_code = fin.read()
+        with open(self.file_path, "r", encoding="utf-8", errors="replace") as fin:
+            source_code_text = fin.read()
+        source_code = source_code_text.encode("utf-8")
         try: 
             tree = self.parser.parse(source_code)
             self._extract_functions(tree.root_node, source_code)

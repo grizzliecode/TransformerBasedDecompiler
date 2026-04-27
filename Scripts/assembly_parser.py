@@ -70,7 +70,6 @@ class AssemblyParser:
         current_data_segment = []
         current_code_segment = []
         if not os.path.exists(self.assembly_file):
-            print(f"Assembly file {self.assembly_file} does not exist.")
             return
         with open(self.assembly_file, 'r') as fin:
             lines = fin.readlines()
@@ -83,40 +82,44 @@ class AssemblyParser:
                     if cs and not ds:
                         self.state = SegmentationState.CODE
                         current_code_segment.append(line)
-                        i+=1
-                    elif ds and not cs:
+                    elif ds:
                         self.state = SegmentationState.DATA
                         current_data_segment.append(line)
-                        i+=1
-                    else:
-                        i+=1
+                    i += 1
                 elif self.state == SegmentationState.DATA:
-                    if not cs and de:
-                        self.state = SegmentationState.IDLE
-                    elif cs:
-                        current_code_segment.append(line)
+                    if cs:
                         self.state = SegmentationState.CODE
-                        i+=1
+                        current_code_segment.append(line)
+                    elif de:
+                        self.state = SegmentationState.IDLE
                     else:
                         current_data_segment.append(line)
-                        i+=1
+                    i += 1
                 elif self.state == SegmentationState.CODE:
-                    if ce and not ds:  
-                        self.state = SegmentationState.IDLE
+                    is_new_func_start = any(sig in line for sig in [".def", ".globl"])
+                    f_already_started = any(":" in l or "\t" in l for l in current_code_segment)
+                    if is_new_func_start and f_already_started:
+                        self.code_segments.append("".join(current_code_segment))
+                        current_code_segment = [line]
+                        i += 1
+                        continue
+                    if ce:  
+                        current_code_segment.append(line)
                         self.code_segments.append("".join(current_code_segment))
                         current_code_segment = []
+                        self.state = SegmentationState.IDLE
                     elif ds:
                         self.code_segments.append("".join(current_code_segment))
                         current_code_segment = []
                         current_data_segment.append(line)
                         self.state = SegmentationState.DATA
-                        i+=1
                     else:
                         current_code_segment.append(line)
-                        i+=1
-            if len(current_code_segment) > 0:
+                    i += 1
+            if current_code_segment:
                 self.code_segments.append("".join(current_code_segment))
-        self.data_segments = "\n".join(current_data_segment)
+            if current_data_segment:
+                self.data_segments = "".join(current_data_segment)
         
 
     def get_elements(self) -> tuple[list, str]:
