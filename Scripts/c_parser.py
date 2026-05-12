@@ -11,9 +11,35 @@ class CParser:
         self.file_path = file_path
         self.functions = {}
         self.ast = {}
+        self.anon_functions = {}
 
     def _translate_ast(self, node, source_code):
         return source_code[node.start_byte:node.end_byte].decode("utf-8")
+
+    def _anonymize_node(self, node, source_code, mapping, counts):
+        node_type = node.type
+        if node_type in ["identifier", "field_identifier"]:
+            name = source_code[node.start_byte:node.end_byte].decode("utf-8")
+            if name not in mapping:
+                counts['v'] += 1
+                mapping[name] = f"var{counts['v']}"
+            return mapping[name]
+        if node_type == "type_identifier":
+            name = source_code[node.start_byte:node.end_byte].decode("utf-8")
+            if name not in mapping:
+                counts['t'] += 1
+                mapping[name] = f"T{counts['t']}"
+            return mapping[name]
+        if node.child_count == 0:
+            return source_code[node.start_byte:node.end_byte].decode("utf-8")
+        parts = []
+        last_end = node.start_byte
+        for child in node.children:
+            parts.append(source_code[last_end:child.start_byte].decode("utf-8"))
+            parts.append(self._anonymize_node(child, source_code, mapping, counts))
+            last_end = child.end_byte
+        return "".join(parts)
+
 
     def _extract_functions(self, root, source_code):
         query_text = """
@@ -27,12 +53,23 @@ class CParser:
         query_cursor = QueryCursor(query)
         captures = query_cursor.captures(root)
         names = captures.get('function_name', [])
+        mapping = {}
+        func_counter = 0
+        for func_name in names:
+            name_str = self._translate_ast(func_name, source_code)
+            if name_str in mapping:
+                continue
+            func_counter += 1
+            mapping[name_str] = f"func{func_counter}"
+        counts = {'v': 0, 't': 0}
         definitions = captures.get('function_definition', [])
         for name_node, def_node in zip(names, definitions):
             name_str = self._translate_ast(name_node, source_code)
             func_code = self._translate_ast(def_node, source_code)
+            anon_code = self._anonymize_node(def_node, source_code, mapping, counts)
             self.functions[name_str] = func_code
             self.ast[name_str] = str(def_node)
+            self.anon_functions[name_str] = anon_code
     
 
     def parse(self):
@@ -57,6 +94,9 @@ class CParser:
     
     def get_all_asts(self):
         return self.ast
+
+    def get_anon_function(self, name):
+        return self.anon_functions.get(name, None)
 
 
     
