@@ -2,6 +2,29 @@ import tree_sitter_c as tsc
 from tree_sitter import Language, Parser, Query, QueryCursor
 import os
 
+COMMON_FUNCTIONS = {
+    "printf", "scanf", "fprintf", "fscanf", "sprintf", "sscanf", "snprintf",
+    "fopen", "fclose", "fread", "fwrite", "fseek", "ftell", "rewind",
+    "fgetc", "fgets", "fputc", "fputs", "getchar", "putchar", "puts", "gets",
+    "perror", "remove", "rename", "fflush",
+    "malloc", "calloc", "realloc", "free", 
+    "exit", "abort", "atexit", "system",
+    "atoi", "atol", "atof", "strtol", "strtoul", "strtod",
+    "rand", "srand", "abs", "labs", "qsort", "bsearch",
+    "strlen", "strcpy", "strncpy", "strcat", "strncat", 
+    "strcmp", "strncmp", "strchr", "strrchr", "strstr", "strspn", "strcspn", 
+    "strpbrk", "strtok", "strerror",
+    "memcpy", "memmove", "memset", "memcmp", "memchr",
+    "sqrt", "pow", "abs", "labs", "fabs", "ceil", "floor", "round", 
+    "sin", "cos", "tan", "asin", "acos", "atan", "atan2",
+    "log", "log10", "exp", "fmod",
+    "isalpha", "isdigit", "isalnum", "isspace", "isupper", "islower", 
+    "isxdigit", "ispunct", "iscntrl", "isprint", "isgraph",
+    "toupper", "tolower",
+    "time", "clock", "difftime", "ctime", "asctime", "localtime", "gmtime", "strftime",
+    "open", "close", "read", "write", "fork", "exec", "wait", "sleep", "usleep"
+}
+
 class CParser:
     def __init__(self, file_path):
         if not os.path.exists(file_path):
@@ -20,12 +43,10 @@ class CParser:
         node_type = node.type
         if node_type in ["identifier", "field_identifier"]:
             name = source_code[node.start_byte:node.end_byte].decode("utf-8")
-            if node.parent:
-                parent_type = node.parent.type
-                if parent_type == "function_declarator" and node.parent.child_by_field_name("declarator") == node:
-                    return name
-                if parent_type == "call_expression" and node.parent.child_by_field_name("function") == node:
-                    return name
+            if node.parent and node.parent.type == "call_expression":
+                if node.parent.child_by_field_name("function") == node:
+                    if name in COMMON_FUNCTIONS:
+                        return name
             if name not in mapping:
                 counts['v'] += 1
                 mapping[name] = f"var{counts['v']}"

@@ -57,7 +57,7 @@ def main(n: int, directory_path: str, lock):
                                 local_tuples.append({
                                     "function_name": func_name,
                                     "assembly_code": func,
-                                    "c_code": functions[func_name],
+                                    "c_code": cParser.get_anon_function(func_name),
                                     "data_segment": data_segment
                                 })
                     except Exception as e:

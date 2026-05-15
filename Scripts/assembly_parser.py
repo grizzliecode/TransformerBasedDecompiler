@@ -28,7 +28,8 @@ END_FUNCTION = {
     ".size",
     ".ident", 
     ".section",
-    ".file"
+    ".file",
+    ".indent"
 }
 
 
@@ -104,7 +105,6 @@ class AssemblyParser:
                         i += 1
                         continue
                     if ce:  
-                        current_code_segment.append(line)
                         self.code_segments.append("".join(current_code_segment))
                         current_code_segment = []
                         self.state = SegmentationState.IDLE
@@ -113,9 +113,10 @@ class AssemblyParser:
                         current_code_segment = []
                         current_data_segment.append(line)
                         self.state = SegmentationState.DATA
+                        i += 1
                     else:
                         current_code_segment.append(line)
-                    i += 1
+                        i += 1
             if current_code_segment:
                 self.code_segments.append("".join(current_code_segment))
             if current_data_segment:
