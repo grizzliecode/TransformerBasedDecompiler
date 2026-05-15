@@ -20,6 +20,12 @@ class CParser:
         node_type = node.type
         if node_type in ["identifier", "field_identifier"]:
             name = source_code[node.start_byte:node.end_byte].decode("utf-8")
+            if node.parent:
+                parent_type = node.parent.type
+                if parent_type == "function_declarator" and node.parent.child_by_field_name("declarator") == node:
+                    return name
+                if parent_type == "call_expression" and node.parent.child_by_field_name("function") == node:
+                    return name
             if name not in mapping:
                 counts['v'] += 1
                 mapping[name] = f"var{counts['v']}"
