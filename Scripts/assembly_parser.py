@@ -95,7 +95,7 @@ class AssemblyParser:
                         self.state = SegmentationState.IDLE
                     else:
                         current_data_segment.append(line)
-                    i += 1
+                        i += 1
                 elif self.state == SegmentationState.CODE:
                     is_new_func_start = any(sig in line for sig in [".def", ".globl"])
                     f_already_started = any(":" in l or "\t" in l for l in current_code_segment)
