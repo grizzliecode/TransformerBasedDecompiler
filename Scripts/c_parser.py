@@ -26,7 +26,7 @@ COMMON_FUNCTIONS = {
 }
 
 class CParser:
-    def __init__(self, file_path):
+    def __init__(self, file_path, anonymize=False):
         if not os.path.exists(file_path):
             raise Exception(f"File specified by file_path does not exist {file_path}")
         self.language = Language(tsc.language())
@@ -35,6 +35,7 @@ class CParser:
         self.functions = {}
         self.ast = {}
         self.anon_functions = {}
+        self.anonymize = anonymize
 
     def _translate_ast(self, node, source_code):
         return source_code[node.start_byte:node.end_byte].decode("utf-8")
@@ -67,6 +68,25 @@ class CParser:
             last_end = child.end_byte
         return "".join(parts)
 
+    def extract_function_name(self, tree, source_bytes):
+        root = tree.root_node
+        names = []
+        def walk(node):
+            if node.type == "function_definition":
+                declarator = node.child_by_field_name("declarator")
+                if not declarator:
+                    return
+                func_decl = declarator
+                for child in func_decl.children:
+                    if child.type == "identifier":
+                        name = source_bytes[child.start_byte:child.end_byte].decode("utf-8")
+                        names.append(name)
+                        break
+            for c in node.children:
+                walk(c)
+        walk(root)
+        return names
+
 
     def _extract_functions(self, root, source_code):
         query_text = """
@@ -79,7 +99,21 @@ class CParser:
         query = Query(self.language, query_text)
         query_cursor = QueryCursor(query)
         captures = query_cursor.captures(root)
-        names = captures.get('function_name', [])
+        names = []
+        definitions = captures.get('function_definition', [])
+        pairs = []
+        for def_node in definitions:
+            name_node = None
+            for child in def_node.children:
+                if child.type == "function_declarator":
+                    for sub in child.children:
+                        if sub.type == "identifier":
+                            name_node = sub
+                            break
+            if name_node is None:
+                continue
+            pairs.append((name_node, def_node))
+
         mapping = {}
         func_counter = 0
         for func_name in names:
@@ -89,11 +123,12 @@ class CParser:
             func_counter += 1
             mapping[name_str] = f"func{func_counter}"
         counts = {'v': 0, 't': 0}
-        definitions = captures.get('function_definition', [])
-        for name_node, def_node in zip(names, definitions):
+        for name_node, def_node in pairs:
             name_str = self._translate_ast(name_node, source_code)
             func_code = self._translate_ast(def_node, source_code)
-            anon_code = self._anonymize_node(def_node, source_code, mapping, counts)
+            anon_code = func_code
+            if self.anonymize:
+                anon_code = self._anonymize_node(def_node, source_code, mapping, counts)
             self.functions[name_str] = func_code
             self.ast[name_str] = str(def_node)
             self.anon_functions[name_str] = anon_code

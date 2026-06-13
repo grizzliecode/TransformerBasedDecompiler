@@ -46,7 +46,7 @@ def main(n: int, directory_path: str, lock):
                         continue
                     try:
                         aParser = AssemblyParser(os.path.join(root, file))
-                        cParser = CParser(c_source_file)
+                        cParser = CParser(c_source_file, anonymize=False)
                         aParser.parse()
                         cParser.parse()
                         data_segment, code_segments = aParser.get_elements()

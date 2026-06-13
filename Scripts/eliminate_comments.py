@@ -29,8 +29,10 @@ def remove_comments_from_file(input_file, output_file):
  
 
 if __name__ == "__main__":
-    input_files = ["../dataset/train1.jsonl", "../dataset/validation1.jsonl", "../dataset/test1.jsonl"]
-    output_files = ["../dataset/train.jsonl", "../dataset/validation.jsonl", "../dataset/test.jsonl"]
+    if not os.path.exists("../dataset_commentless"):
+        os.makedirs("../dataset_commentless")
+    input_files = ["../dataset/train_original.jsonl", "../dataset/validation_original.jsonl", "../dataset/test_original.jsonl"]
+    output_files = ["../dataset_commentless/train_original.jsonl", "../dataset_commentless/validation_original.jsonl", "../dataset_commentless/test_original.jsonl"]
     for input_file, output_file in zip(input_files, output_files):
         if not os.path.exists(input_file):
             print(f"Input file {input_file} does not exist. Skipping.")
