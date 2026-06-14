@@ -15,8 +15,8 @@ CLEAN_DATASET = "../dataset_clean"
 DATASET_PAIRS = "../dataset_pairs"
 
 START_FUNCTION = {
-    ".global",
-    ".globl",
+    # ".global",
+    # ".globl",
     ".def",
     ".type",
     ".cfi_startproc" 
@@ -97,7 +97,7 @@ class AssemblyParser:
                         current_data_segment.append(line)
                         i += 1
                 elif self.state == SegmentationState.CODE:
-                    is_new_func_start = any(sig in line for sig in [".def", ".globl"])
+                    is_new_func_start = any(sig in line for sig in [".def"])
                     f_already_started = any(":" in l or "\t" in l for l in current_code_segment)
                     if is_new_func_start and f_already_started:
                         self.code_segments.append("".join(current_code_segment))

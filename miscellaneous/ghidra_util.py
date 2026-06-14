@@ -8,7 +8,9 @@ from pathlib import Path
 class GhidraDecompiler:
     CURRENT_PATH = Path(__file__).resolve().parent
     JAVA_PATH = os.path.join(CURRENT_PATH, "DecompileScript.java")
-    
+    if not os.environ.get("GHIDRA_PATH"):
+        raise FileNotFoundError("Ghidra path was not specified using the GHIDRA_PATH environment variable")
+    GHIDRA_PATH = os.environ.get("GHIDRA_PATH")
     def __init__(self, ghidra_path: str = "/home/octa/ghidra_12.1.2_PUBLIC"):
         if not os.path.exists(ghidra_path):
             if not os.environ.get("GHIDRA_PATH"):
@@ -28,7 +30,21 @@ class GhidraDecompiler:
         c_functions = []
         gcc_flag = "-m64" if arch == "x86_64" else "-m32"
         for assembly_code in assembly_functions:
-            formatted_asm = f".intel_syntax noprefix\n.global ghidra_target\nghidra_target:\n{assembly_code}\n"
+            if not assembly_code.strip():
+                continue
+            cleaned_lines = []
+            for line in assembly_code.splitlines():
+                if any(directive in line for directive in [".def", ".scl", ".type", ".endef"]):
+                    continue
+                cleaned_lines.append(line)
+            cleaned_assembly = "\n".join(cleaned_lines)
+            formatted_asm = (
+                ".intel_syntax noprefix\n"
+                ".global ghidra_target\n"
+                ".type ghidra_target, @function\n"
+                "ghidra_target:\n"
+                f"{cleaned_assembly}\n"
+            )
             with tempfile.TemporaryDirectory() as tmpdir:
                 obj_file = os.path.join(tmpdir, "target.o")
                 try:
@@ -46,11 +62,11 @@ class GhidraDecompiler:
                 with open(ghidra_script_path, "w") as f:
                     f.write(self.load_jvscript())
                 cmd = [
-                    "/home/octa/ghidra_12.1.2_PUBLIC/support/analyzeHeadless",
+                    self.GHIDRA_PATH,
                     tmpdir, "TmpProject",
                     "-import", obj_file,
-                    "-scriptPath", "/home/octa/licenta/TransformerBasedDecompiler/miscellaneous",  # Folder where the script lives
-                    "-postScript", "DecompileScript.java",                                         # Name ONLY
+                    "-scriptPath",self.CURRENT_PATH,
+                    "-postScript", "DecompileScript.java",
                     "-deleteProject"
                 ]
                 try:

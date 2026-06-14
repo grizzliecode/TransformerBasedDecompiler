@@ -42,6 +42,13 @@ if __name__ == "__main__":
     else:
         data_segment,assembly_functions = extract_assembly(input_path)
     c_functions = []
+    valid_assembly_functions = []
+    for func in assembly_functions:
+        cnt = func.count("\n")
+        if cnt <= 1:
+            continue
+        valid_assembly_functions.append(func)
+    assembly_functions = valid_assembly_functions
     if mode == "ghidra":
         gd = GhidraDecompiler()
         machine = platform.machine().lower()
